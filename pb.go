@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"sync/atomic"
 	"time"
 )
 
@@ -28,6 +27,9 @@ func New(total int) *ProgressBar {
 		ShowCounters: true,
 		ShowBar:      true,
 		ShowTimeLeft: true,
+		increment:    make(chan int64, 1),
+		update:       make(chan int64, 1),
+		finish:       make(chan bool, 1),
 	}
 }
 
@@ -47,9 +49,12 @@ type ProgressBar struct {
 	Output                                           io.Writer
 	Callback                                         Callback
 	NotPrint                                         bool
-	current                                          int64
-	isFinish                                         bool
-	startTime                                        time.Time
+
+	increment chan int64
+	update    chan int64
+	finish    chan bool
+
+	startTime time.Time
 }
 
 // Start print
@@ -59,25 +64,25 @@ func (pb *ProgressBar) Start() {
 }
 
 // Increment current value
-func (pb *ProgressBar) Increment() int {
-	return pb.Add(1)
+func (pb *ProgressBar) Increment() {
+	pb.Add(1)
 }
 
 // Set current value
-func (pb *ProgressBar) Set(current int) {
-	atomic.StoreInt64(&pb.current, int64(current))
+func (pb *ProgressBar) Set(current int64) {
+	pb.update <- current
 }
 
 // Add to current value
-func (pb *ProgressBar) Add(add int) int {
-	return int(atomic.AddInt64(&pb.current, int64(add)))
+func (pb *ProgressBar) Add(add int64) {
+	pb.increment <- add
 }
 
 // End print
 func (pb *ProgressBar) Finish() {
-	pb.isFinish = true
-	pb.write(atomic.LoadInt64(&pb.current))
-	if ! pb.NotPrint {
+	pb.finish <- true
+
+	if !pb.NotPrint {
 		fmt.Println()
 	}
 }
@@ -151,23 +156,32 @@ func (pb *ProgressBar) write(current int64) {
 		fmt.Fprint(pb.Output, out+end)
 	case pb.Callback != nil:
 		pb.Callback(out + end)
-	case ! pb.NotPrint:
+	case !pb.NotPrint:
 		fmt.Print("\r" + out + end)
 	}
 }
 
 func (pb *ProgressBar) writer() {
-	var c, oc int64
+	var current, i int64
+
+	ticker := time.NewTicker(pb.RefreshRate)
+	defer ticker.Stop()
+
+	// Write last result on finish
+	defer pb.write(current)
 	for {
-		if pb.isFinish {
-			break
+		select {
+		case <-pb.finish:
+			return
+		case i = <-pb.update:
+			current = i
+			pb.write(current)
+		case i = <-pb.increment:
+			current += i
+			pb.write(current)
+		case <-ticker.C:
+			pb.write(current)
 		}
-		c = atomic.LoadInt64(&pb.current)
-		if c != oc {
-			pb.write(c)
-			oc = c
-		}
-		time.Sleep(pb.RefreshRate)
 	}
 }
 
