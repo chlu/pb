@@ -1,11 +1,11 @@
 ## Terminal progress bar for Go  
 
-Simple progress bar for console programms. 
-    
+Simple progress bar for console programms. Fork of https://github.com/chlu/pb with usage of channels and refresh of time when progress stalls.
+
 
 ### Installation
 ```
-go get github.com/cheggaaa/pb
+go get github.com/chlu/pb
 ```   
 
 ### Usage   
@@ -13,7 +13,7 @@ go get github.com/cheggaaa/pb
 package main
 
 import (
-	"github.com/cheggaaa/pb"
+	"github.com/chlu/pb"
 	"time"
 )
 
