@@ -167,8 +167,6 @@ func (pb *ProgressBar) writer() {
 	ticker := time.NewTicker(pb.RefreshRate)
 	defer ticker.Stop()
 
-	// Write last result on finish
-	defer pb.write(current)
 	for {
 		select {
 		case <-pb.finish:
