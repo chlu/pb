@@ -1,6 +1,6 @@
 ## Terminal progress bar for Go  
 
-Simple progress bar for console programms. Fork of https://github.com/chlu/pb with usage of channels and refresh of time when progress stalls.
+Simple progress bar for console programms. Fork of https://github.com/cheggaaa/pb with usage of channels and refresh of time when progress stalls.
 
 
 ### Installation
